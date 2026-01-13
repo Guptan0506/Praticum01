@@ -2,10 +2,9 @@ import javax.swing.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Scanner;
-
-import static java.nio.file.StandardOpenOption.CREATE;
 
 public class PersonWriter {
     public static void main(String[] args) {
@@ -33,54 +32,42 @@ public class PersonWriter {
 
             rec = id + "," + lastName + "," + firstName + "," + title + "," + yob;
 
-            //System.out.println(rec);
-
             recs.add(rec);
             done = SafeInput.getYNConfirm(in, "Are you done (Y/N)?");
 
         } while(!done);
+
         File workingDirectory = new File(System.getProperty("user.dir"));
         JFileChooser chooser = new JFileChooser();
         chooser.setCurrentDirectory(workingDirectory);
         File selectedFile;
         try
         {
-            // uses a fixed known path:
-            //  Path file = Paths.get("c:\\My Documents\\data.txt");
-
-            // use the toolkit to get the current working directory of the IDE
-            // Not sure if the toolkit is thread safe...
-            //File workingDirectory = new File(System.getProperty("user.dir"));
-
-            // Typically, we want the user to pick the file so we use a file chooser
-            // kind of ugly code to make the chooser work with NIO.
-            // Because the chooser is part of Swing it should be thread safe.
             chooser.setCurrentDirectory(workingDirectory);
-            // Using the chooser adds some complexity to the code.
-            // we have to code the complete program within the conditional return of
-            // the filechooser because the user can close it without picking a file
+
+            // write collected records to a file named `recs` under the project `src` directory
+            Path outFile = workingDirectory.toPath().resolve("src").resolve("recs");
+            if (outFile.getParent() != null) {
+                Files.createDirectories(outFile.getParent()); // ensure `src` exists
+            }
+            Files.write(outFile, recs, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            System.out.println("Wrote " + recs.size() + " records to " + outFile);
 
             if(chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION)
             {
                 selectedFile = chooser.getSelectedFile();
                 Path file = selectedFile.toPath();
-                // Typical java pattern of inherited classes
-                // we wrap a BufferedWriter around a lower level BufferedOutputStream
-                InputStream in =
-                        new BufferedInputStream(Files.newInputStream(file, CREATE));
-                BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(in));
+                InputStream fileIn = new BufferedInputStream(Files.newInputStream(file, StandardOpenOption.CREATE));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(fileIn));
 
-                // Finally we can read the file LOL!
                 int line = 0;
                 while(reader.ready())
                 {
                     rec = reader.readLine();
                     line++;
-                    // echo to screen
                     System.out.printf("\nLine %4d %-60s ", line, rec);
                 }
-                reader.close(); // must close the file to seal it and flush buffer
+                reader.close();
                 System.out.println("\n\nData file read!");
             }
         }
